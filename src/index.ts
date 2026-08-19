@@ -14,7 +14,7 @@ export const name = 'vscode-opener'
 export const Config = z.object({
   /** How to launch VS Code: a bare command name (probed on PATH, with
    *  well-known install locations tried on Windows) or an absolute path
-   *  to the executable, e.g. `C:\Users\you\AppData\Local\Programs\Microsoft VS Code\Code.exe`. */
+   *  to the executable, e.g. `C:\Program Files\Microsoft VS Code\Code.exe`. */
   codeCommand: z.string().default('code'),
   /** Pass `-r` so the workspace opens in the most recently used window
    *  instead of a new one. */
@@ -78,7 +78,7 @@ export function apply(
       if (executable === null) {
         return {
           kind: 'error',
-          text: `找不到 VS Code 启动命令 "${config.codeCommand}"。请在 profile 的 cordis.patch.yml 中把 vscode-opener 的 codeCommand 配置为完整路径，例如 "C:\\Users\\you\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"`,
+          text: `找不到 VS Code 启动命令 "${config.codeCommand}"。请在 profile 的 cordis.patch.yml 中把 vscode-opener 的 codeCommand 配置为完整路径，例如 "C:\\Program Files\\Microsoft VS Code\\Code.exe"`,
         }
       }
       try {
@@ -114,9 +114,13 @@ export function apply(
 /** Resolve the directory to open: the raw argument when given, else the session cwd. */
 function resolveTarget(base: string, raw: string): string | Error {
   const target = raw === '' ? base : resolve(base, raw)
-  if (!existsSync(target)) return new Error(`目录不存在: ${target}`)
-  if (!statSync(target).isDirectory()) return new Error(`不是目录: ${target}`)
-  return target
+  try {
+    if (!existsSync(target)) return new Error(`目录不存在: ${target}`)
+    if (!statSync(target).isDirectory()) return new Error(`不是目录: ${target}`)
+    return target
+  } catch (error) {
+    return new Error(`无法访问目录 ${target}: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 /** Quick spawn probe: a bare command that Node can launch directly works. */
@@ -380,6 +384,7 @@ interface LaunchResult {
 function sendJson(res: RouteResponse, status: number, body: LaunchResult): void {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
   res.end(JSON.stringify(body))
 }
 
@@ -399,9 +404,10 @@ export function registerLaunchRoute(
     kind: 'exact',
     path: LAUNCH_ROUTE,
     handler: async (req, res) => {
-      const method = req.method ?? 'GET'
-      if (method !== 'GET' && method !== 'POST') {
+      const method = req.method ?? ''
+      if (method !== 'POST') {
         res.statusCode = 405
+        res.setHeader('Allow', 'POST')
         res.end()
         return
       }
@@ -434,7 +440,7 @@ export function registerLaunchRoute(
       if (executable === null) {
         sendJson(res, 500, {
           ok: false,
-          error: `找不到 VS Code 启动命令 "${config.codeCommand}"。请在 profile 的 cordis.patch.yml 中把 vscode-opener 的 codeCommand 配置为完整路径，例如 "C:\\Users\\you\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"`,
+          error: `找不到 VS Code 启动命令 "${config.codeCommand}"。请在 profile 的 cordis.patch.yml 中把 vscode-opener 的 codeCommand 配置为完整路径，例如 "C:\\Program Files\\Microsoft VS Code\\Code.exe"`,
         })
         return
       }
@@ -462,9 +468,10 @@ export function registerExplorerRoute(webServer: WebServerService, sessions: Ses
     kind: 'exact',
     path: EXPLORER_ROUTE,
     handler: async (req, res) => {
-      const method = req.method ?? 'GET'
-      if (method !== 'GET' && method !== 'POST') {
+      const method = req.method ?? ''
+      if (method !== 'POST') {
         res.statusCode = 405
+        res.setHeader('Allow', 'POST')
         res.end()
         return
       }

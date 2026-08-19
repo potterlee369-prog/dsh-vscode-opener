@@ -9,9 +9,9 @@ DSH Web 插件:在对话界面一键用 VS Code 或资源管理器打开**当前
 
 ```powershell
 # 1. 安装到 web profile(link: 方式,源码改动即时生效,无需重新 add)
-dsh plugin --profile web add "E:\dsh_custom\dsh-vscode-opener"
+dsh plugin --profile web add "<path-to-repo>"
 
-# 2. 在 C:\Users\<you>\.dsh\profiles\web\cordis.patch.yml 中挂载该行:
+# 2. 在 <user-profile>\.dsh\profiles\web\cordis.patch.yml 中挂载该行:
 #    - insert:
 #        - id: vscode-opener
 #          name: dsh-vscode-opener
@@ -26,7 +26,7 @@ dsh plugin --profile web add "E:\dsh_custom\dsh-vscode-opener"
 
 | 键 | 默认值 | 说明 |
 |---|---|---|
-| `codeCommand` | `code` | 启动命令。裸名称(如 `code`)会先在 PATH 上探测,Windows 下再依次探测 `%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe`、`%ProgramFiles%\Microsoft VS Code\Code.exe`、`%ProgramFiles(x86)%\Microsoft VS Code\Code.exe`;也可配置为完整路径,如 `C:\Users\you\AppData\Local\Programs\Microsoft VS Code\Code.exe` |
+| `codeCommand` | `code` | 启动命令。裸名称(如 `code`)会先在 PATH 上探测,Windows 下再依次探测 `%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe`、`%ProgramFiles%\Microsoft VS Code\Code.exe`、`%ProgramFiles(x86)%\Microsoft VS Code\Code.exe`;也可配置为完整路径,如 `C:\Program Files\Microsoft VS Code\Code.exe` |
 | `reuseWindow` | `false` | 为 `true` 时传 `-r`,在最近使用的窗口打开而非新开窗口 |
 
 ## 工作原理
@@ -38,11 +38,14 @@ dsh plugin --profile web add "E:\dsh_custom\dsh-vscode-opener"
 ## 开发循环
 
 ```powershell
-cd E:\dsh_custom\dsh-vscode-opener
-npm install        # 首次
-node build.mjs     # esbuild 打宿主/客户端 bundle + tsc 生成 d.ts
-node smoke-test.mjs      # 端到端冒烟:真的会打开 VS Code
-node client-smoke.mjs    # 验证客户端 bundle 的工厂形态
+cd "<path-to-repo>"
+npm install        # 首次安装依赖并生成 lib
+npm test           # build + 客户端 bundle 冒烟测试
+
+# 可选：显式开启会真正启动 VS Code 的冒烟测试
+$env:RUN_VSCODE_SMOKE = '1'
+$env:SMOKE_CWD = (Get-Location).Path
+node smoke-test.mjs
 ```
 
 改完代码后 `node build.mjs`,然后**重启 `dsh web`**(宿主行与客户端 bundle 都在启动时扫描/哈希)。link: 安装意味着无需重新 pnpm add。
@@ -52,3 +55,10 @@ node client-smoke.mjs    # 验证客户端 bundle 的工厂形态
 - 重启才生效:客户端插件清单在 `dsh web` 启动时扫描,`/plugins/dsh-vscode-opener/client.js` 的 hash 也取启动时快照。
 - `/vscode <路径>` 的参数会原样解析后交给 `code`;局域网可信客户端本就有完整 API 权限,本插件不额外收紧,亦不额外放宽。
 - 仅 web profile 验证过(按钮需要 Web 界面);headless 下 `/vscode` 命令本身可用,但没有按钮。
+
+## 兼容性与安全边界
+
+- 需要宿主提供 DSH 的命令、Web Server、会话和 Web 插件槽位接口；当前仅验证过 web profile。
+- 按钮使用的静默启动路由仅接受 `POST`，但仍会在宿主机器上启动本地程序。请确保 `dsh web` 的鉴权和网络暴露范围适合你的使用场景，不要把它暴露给不可信客户端。
+- `/vscode <路径>` 支持相对路径和绝对路径；这是为打开会话目录之外的目录保留的能力，只应在可信会话中使用。
+- `assets/vscode-stable-official.svg` 的品牌说明见 [NOTICE.md](NOTICE.md)。

@@ -1,5 +1,6 @@
 // Temporary smoke test for the built host plugin (dev-only, not shipped).
-// Runs the registered command handler end to end and really launches VS Code.
+// By default it only checks command registration. Set RUN_VSCODE_SMOKE=1 to
+// run the end-to-end variant that really launches VS Code.
 import { apply, Config } from './lib/index.js'
 
 const config = Config({})
@@ -18,10 +19,14 @@ apply(ctx, config)
 
 console.log('registered command:', captured.name, '-', captured.description)
 
-const result = await captured.handler({
-  commandId: 'smoke-1',
-  agent: { session: { header: { cwd: 'E:\\ai_ques_item_analysis' } } },
-  rawInput: '',
-  signal: new AbortController().signal,
-})
-console.log('handler result:', JSON.stringify(result, null, 2))
+if (process.env.RUN_VSCODE_SMOKE !== '1') {
+  console.log('registration smoke: OK (set RUN_VSCODE_SMOKE=1 to launch VS Code)')
+} else {
+  const result = await captured.handler({
+    commandId: 'smoke-1',
+    agent: { session: { header: { cwd: process.env.SMOKE_CWD ?? process.cwd() } } },
+    rawInput: '',
+    signal: new AbortController().signal,
+  })
+  console.log('handler result:', JSON.stringify(result, null, 2))
+}

@@ -24,9 +24,14 @@
   },
   "files": [
     "lib",
-    "src"
+    "src",
+    "assets",
+    "NOTICE.md"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"
   },
@@ -43,6 +48,8 @@
     "typescript": "^5.7.0"
   },
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "prepare": "node build.mjs",
+    "test": "npm run build && node client-smoke.mjs"
   }
 }
