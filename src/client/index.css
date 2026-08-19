@@ -1,0 +1,54 @@
+/* Composer button styling over the product's --dsw-* theme tokens,
+   so light/dark adapts automatically. */
+.dsh-open-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.dsh-open-button:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.dsh-open-button:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
+.dsh-open-button.busy {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Success/error feedback: the extracted logo uses fixed brand fills, so it is
+   tinted by rotating its ~204° blue hue (green ~140°, red ~0°); the generic
+   fallback glyph rides currentColor and switches to the state color instead. */
+.dsh-open-button img {
+  width: 15px;
+  height: 15px;
+}
+
+.dsh-open-button.ok img {
+  filter: hue-rotate(-64deg) saturate(1.15);
+}
+
+.dsh-open-button.error img {
+  filter: hue-rotate(156deg) saturate(1.25);
+}
+
+.dsh-open-button.ok svg {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.dsh-open-button.error svg {
+  color: var(--dsw-alias-state-error-primary);
+}
